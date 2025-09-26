@@ -39,12 +39,22 @@ app.use(cors({
     // Permitir requests sin origin (como mobile apps o curl requests)
     if (!origin) return callback(null, true)
     
+    // Permitir localhost y URLs específicas
     if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true)
-    } else {
-      console.log('CORS blocked origin:', origin)
-      callback(new Error('No permitido por CORS'))
+      return callback(null, true)
     }
+    
+    // Permitir todas las URLs de Vercel (preview y producción)
+    if (origin && (
+      origin.includes('.vercel.app') || 
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    )) {
+      return callback(null, true)
+    }
+    
+    console.log('CORS blocked origin:', origin)
+    callback(new Error('No permitido por CORS'))
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

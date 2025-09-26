@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
 
 const AuthContext = createContext()
@@ -15,6 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   // Configurar axios para incluir cookies y base URL
   axios.defaults.withCredentials = true
@@ -31,7 +34,12 @@ export const AuthProvider = ({ children }) => {
     if (authStatus === 'success') {
       // Limpiar URL y recargar datos del usuario
       window.history.replaceState({}, document.title, window.location.pathname)
-      checkAuthStatus()
+      checkAuthStatus().then(() => {
+        // Redirigir al dashboard después de autenticarse
+        if (location.pathname === '/' || location.pathname === '/login') {
+          navigate('/dashboard')
+        }
+      })
     } else if (authError) {
       setError(getErrorMessage(authError))
       window.history.replaceState({}, document.title, window.location.pathname)
@@ -41,14 +49,19 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setLoading(true)
+      console.log('🔍 Verificando estado de autenticación...')
       const response = await axios.get('/auth/me')
+      console.log('✅ Usuario autenticado:', response.data)
       setUser(response.data)
       setError(null)
+      return response.data
     } catch (error) {
+      console.log('❌ No autenticado:', error.response?.status)
       setUser(null)
       if (error.response?.status !== 401) {
         console.error('Error verificando autenticación:', error)
       }
+      return null
     } finally {
       setLoading(false)
     }
@@ -56,6 +69,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    console.log('🚀 Iniciando login con Google:', `${apiUrl}/auth/google`)
     window.location.href = `${apiUrl}/auth/google`
   }
 
