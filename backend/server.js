@@ -13,6 +13,7 @@ const apiRoutes = require('./routes/api')
 const { initializeWhatsApp } = require('./services/whatsapp')
 const { initializeEmail } = require('./services/email')
 const { initializeScheduler } = require('./services/scheduler')
+const { keepAlive } = require('./services/keepAlive')
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -58,7 +59,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie']
 }))
 
 // Body parsing middleware
@@ -73,9 +75,23 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    maxAge: 24 * 60 * 60 * 1000, // 24 horas
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Permitir cookies entre dominios
   }
 }))
+
+// Debug middleware para sesiones
+app.use((req, res, next) => {
+  if (req.path.includes('/auth/me')) {
+    console.log('🔍 Debug sesión:', {
+      sessionID: req.sessionID,
+      hasUser: !!req.session.user,
+      cookies: req.headers.cookie,
+      origin: req.headers.origin
+    })
+  }
+  next()
+})
 
 // Routes
 app.use('/auth', authRoutes)
@@ -121,9 +137,15 @@ if (process.env.EMAIL_ENABLED === 'true') {
 initializeScheduler()
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`)
-  console.log(`📚 Semillero Digital Dashboard API`)
-  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`🔑 Google Client ID configurado: ${process.env.GOOGLE_CLIENT_ID ? 'SÍ' : 'NO'}`)
-  console.log(`🔐 Google Client Secret configurado: ${process.env.GOOGLE_CLIENT_SECRET ? 'SÍ' : 'NO'}`)
+  // Inicializar servicios
+  initializeWhatsApp()
+  initializeEmail()
+  initializeScheduler()
+  keepAlive() // Mantener el servicio activo
+  
+  console.log('🚀 Servidor ejecutándose en puerto', PORT)
+  console.log('📚 Semillero Digital Dashboard API')
+  console.log('🌍 Entorno:', process.env.NODE_ENV || 'development')
+  console.log('🔑 Google Client ID configurado:', !!process.env.GOOGLE_CLIENT_ID ? 'SÍ' : 'NO')
+  console.log('🔐 Google Client Secret configurado:', !!process.env.GOOGLE_CLIENT_SECRET ? 'SÍ' : 'NO')
 })
