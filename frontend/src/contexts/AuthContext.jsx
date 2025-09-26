@@ -16,8 +16,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Configurar axios para incluir cookies
+  // Configurar axios para incluir cookies y base URL
   axios.defaults.withCredentials = true
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
   useEffect(() => {
     checkAuthStatus()
@@ -54,7 +55,8 @@ export const AuthProvider = ({ children }) => {
   }
 
   const login = () => {
-    window.location.href = '/auth/google'
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    window.location.href = `${apiUrl}/auth/google`
   }
 
   const logout = async () => {
