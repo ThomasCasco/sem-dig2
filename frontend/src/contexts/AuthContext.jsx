@@ -40,16 +40,33 @@ export const AuthProvider = ({ children }) => {
         try {
           const userData = JSON.parse(atob(decodeURIComponent(userToken)))
           console.log('📦 Datos de usuario desde URL:', userData)
-          setUser(userData)
+          
+          // Agregar campos faltantes para compatibilidad
+          const completeUserData = {
+            ...userData,
+            id: userData.email, // Usar email como ID si no existe
+            picture: userData.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`
+          }
+          
+          setUser(completeUserData)
           setError(null)
+          setLoading(false)
+          
+          // Guardar en localStorage como backup
+          localStorage.setItem('semillero_user', JSON.stringify(completeUserData))
           
           // Limpiar URL
           window.history.replaceState({}, document.title, window.location.pathname)
           
+          console.log('🚀 Redirigiendo al dashboard...')
+          
           // Redirigir al dashboard
-          if (location.pathname === '/' || location.pathname === '/login') {
-            navigate('/dashboard')
-          }
+          setTimeout(() => {
+            if (location.pathname === '/' || location.pathname === '/login') {
+              navigate('/dashboard')
+            }
+          }, 100)
+          
           return
         } catch (e) {
           console.error('Error parseando token temporal:', e)
@@ -80,9 +97,29 @@ export const AuthProvider = ({ children }) => {
       console.log('✅ Usuario autenticado:', response.data)
       setUser(response.data)
       setError(null)
+      
+      // Guardar en localStorage como backup
+      localStorage.setItem('semillero_user', JSON.stringify(response.data))
+      
       return response.data
     } catch (error) {
       console.log('❌ No autenticado:', error.response?.status)
+      
+      // Intentar recuperar desde localStorage
+      const savedUser = localStorage.getItem('semillero_user')
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser)
+          console.log('🔄 Recuperando usuario desde localStorage:', userData)
+          setUser(userData)
+          setError(null)
+          return userData
+        } catch (e) {
+          console.error('Error parseando usuario guardado:', e)
+          localStorage.removeItem('semillero_user')
+        }
+      }
+      
       setUser(null)
       if (error.response?.status !== 401) {
         console.error('Error verificando autenticación:', error)
@@ -104,8 +141,14 @@ export const AuthProvider = ({ children }) => {
       await axios.post('/auth/logout')
       setUser(null)
       setError(null)
+      localStorage.removeItem('semillero_user')
+      console.log('👋 Sesión cerrada correctamente')
     } catch (error) {
       console.error('Error cerrando sesión:', error)
+      // Limpiar localStorage aunque falle la petición
+      setUser(null)
+      setError(null)
+      localStorage.removeItem('semillero_user')
     }
   }
 
