@@ -66,8 +66,16 @@ router.get('/callback', async (req, res) => {
 
     console.log(`✅ Usuario autenticado: ${userInfo.email} (${userRole})`)
     
-    // Redirigir al frontend con éxito
-    res.redirect(`${process.env.FRONTEND_URL}?auth=success`)
+    // Crear un token temporal para la URL (solo para debugging)
+    const tempToken = Buffer.from(JSON.stringify({
+      email: userInfo.email,
+      name: userInfo.name,
+      role: userRole,
+      timestamp: Date.now()
+    })).toString('base64')
+    
+    // Redirigir al frontend con éxito y datos del usuario
+    res.redirect(`${process.env.FRONTEND_URL}?auth=success&user=${encodeURIComponent(tempToken)}`)
     
   } catch (error) {
     console.error('Error en callback de autenticación:', error)

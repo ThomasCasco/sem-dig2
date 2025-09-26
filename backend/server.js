@@ -71,14 +71,25 @@ app.use(express.urlencoded({ extended: true }))
 app.use(session({
   secret: process.env.SESSION_SECRET || 'semillero-digital-secret',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Cambiar a true para crear sesión aunque esté vacía
+  name: 'semillero.sid', // Nombre específico para la cookie
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 horas
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Permitir cookies entre dominios
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Permitir cookies entre dominios
+    domain: process.env.NODE_ENV === 'production' ? undefined : undefined // No especificar dominio para permitir subdominios
   }
 }))
+
+// Middleware para forzar headers de cookies
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    res.header('Access-Control-Allow-Credentials', 'true')
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie')
+  }
+  next()
+})
 
 // Debug middleware para sesiones
 app.use((req, res, next) => {
@@ -87,7 +98,8 @@ app.use((req, res, next) => {
       sessionID: req.sessionID,
       hasUser: !!req.session.user,
       cookies: req.headers.cookie,
-      origin: req.headers.origin
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent']?.substring(0, 50)
     })
   }
   next()

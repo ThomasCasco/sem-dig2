@@ -30,14 +30,40 @@ export const AuthProvider = ({ children }) => {
     const urlParams = new URLSearchParams(window.location.search)
     const authStatus = urlParams.get('auth')
     const authError = urlParams.get('error')
+    const userToken = urlParams.get('user')
     
     if (authStatus === 'success') {
-      // Limpiar URL y recargar datos del usuario
+      console.log('🎉 Autenticación exitosa detectada')
+      
+      // Si hay token temporal, usarlo como fallback
+      if (userToken) {
+        try {
+          const userData = JSON.parse(atob(decodeURIComponent(userToken)))
+          console.log('📦 Datos de usuario desde URL:', userData)
+          setUser(userData)
+          setError(null)
+          
+          // Limpiar URL
+          window.history.replaceState({}, document.title, window.location.pathname)
+          
+          // Redirigir al dashboard
+          if (location.pathname === '/' || location.pathname === '/login') {
+            navigate('/dashboard')
+          }
+          return
+        } catch (e) {
+          console.error('Error parseando token temporal:', e)
+        }
+      }
+      
+      // Limpiar URL y recargar datos del usuario (método normal)
       window.history.replaceState({}, document.title, window.location.pathname)
-      checkAuthStatus().then(() => {
-        // Redirigir al dashboard después de autenticarse
-        if (location.pathname === '/' || location.pathname === '/login') {
-          navigate('/dashboard')
+      checkAuthStatus().then((userData) => {
+        if (userData) {
+          // Redirigir al dashboard después de autenticarse
+          if (location.pathname === '/' || location.pathname === '/login') {
+            navigate('/dashboard')
+          }
         }
       })
     } else if (authError) {
