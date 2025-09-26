@@ -141,7 +141,7 @@ app.listen(PORT, () => {
   initializeWhatsApp()
   initializeEmail()
   initializeScheduler()
-  keepAlive() // Mantener el servicio activo
+  // keepAlive() // Mantener el servicio activo - temporalmente deshabilitado
   
   console.log('🚀 Servidor ejecutándose en puerto', PORT)
   console.log('📚 Semillero Digital Dashboard API')
